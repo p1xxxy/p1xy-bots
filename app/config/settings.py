@@ -14,3 +14,4 @@ if not BOT_TOKEN:
         "BOT_TOKEN is not configured."
         " Please check your .env file."
     )
+    
