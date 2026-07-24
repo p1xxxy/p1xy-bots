@@ -1,13 +1,10 @@
 import asyncio
-from aiogram import Bot
-from aiogram import Dispatcher
-from aiogram import Router
+from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import CommandStart
 from app.config import settings
-from aiogram.fsm.state import StatesGroup
-from aiogram.fsm.state import State
+from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
-
+from aiogram.fsm.context import FSMContext
 
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
@@ -19,8 +16,9 @@ class AddClient(StatesGroup):
     waiting_for_phone = State()
 
 @router.message(CommandStart())
-async def command_start_handler(message):
-    await message.answer("Hello, world!")
+async def cmd_start_add_client(message, state: FSMContext):
+    await message.answer("Как зовут вашего клиента?")
+    await state.set_state(AddClient.waiting_for_name)
     
 
 async def main():
