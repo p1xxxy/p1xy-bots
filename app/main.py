@@ -19,7 +19,30 @@ class AddClient(StatesGroup):
 async def cmd_start_add_client(message, state: FSMContext):
     await message.answer("Как зовут вашего клиента?")
     await state.set_state(AddClient.waiting_for_name)
-    
+
+@router.message(AddClient.waiting_for_name)
+async def process_name(message, state: FSMContext):
+    name = message.text
+    await state.update_data(name=name)
+    await message.answer("Какой у него email?")
+    await state.set_state(AddClient.waiting_for_email)
+
+@router.message(AddClient.waiting_for_email)
+async def process_email(message, state: FSMContext):
+    email = message.text
+    await state.update_data(email=email)
+    await message.answer("Какой у него телефон?")
+    await state.set_state(AddClient.waiting_for_phone)
+
+@router.message(AddClient.waiting_for_phone)
+async def process_phone(message, state: FSMContext):
+    phone = message.text
+    await state.update_data(phone=phone)
+    await message.answer("Клиент успешно добавлен!")
+    data = await state.get_data()
+    print(data)
+    await state.clear()
+
 
 async def main():
     print("Application started")
