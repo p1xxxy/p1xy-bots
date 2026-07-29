@@ -31,4 +31,5 @@ async def get_all_clients() -> list:
          cursor = await conn.execute("SELECT * FROM clients")
          rows = await cursor.fetchall()
          return rows
-    
+
+

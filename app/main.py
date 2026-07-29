@@ -6,6 +6,8 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from app.config.db import init_db, add_client, get_all_clients
+from app.utils.validators import normalize_phone
+
 
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
@@ -38,7 +40,11 @@ async def process_email(message, state: FSMContext):
 @router.message(AddClient.waiting_for_phone)
 async def process_phone(message, state: FSMContext):
     phone = message.text
-    await state.update_data(phone=phone)
+    normalized_phone = normalize_phone(phone)
+    if not normalized_phone:
+        await message.answer("Некорректный номер телефона. Попробуйте ещё раз.")
+        return
+    await state.update_data(phone=normalized_phone)
     data = await state.get_data()
     await add_client(
     name=data['name'],
