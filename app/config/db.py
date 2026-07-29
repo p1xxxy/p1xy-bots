@@ -1,4 +1,5 @@
 import aiosqlite
+from datetime import datetime
 
 DB_PATH = "clients.db"
 
@@ -16,3 +17,18 @@ async def init_db():
             )
         """)
         await conn.commit()
+        
+async def add_client(name: str, phone: str, email:str | None) -> None:
+    async with aiosqlite.connect(DB_PATH) as conn:
+        await conn.execute(
+            "INSERT INTO clients (name, phone, email, created_at) VALUES (?, ?, ?, ?)",
+            (name, phone, email, datetime.now().isoformat())
+        )
+        await conn.commit()
+        
+async def get_all_clients() -> list:
+    async with aiosqlite.connect(DB_PATH) as conn:
+         cursor = await conn.execute("SELECT * FROM clients")
+         rows = await cursor.fetchall()
+         return rows
+    

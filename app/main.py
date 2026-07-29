@@ -5,6 +5,7 @@ from app.config import settings
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
+from app.config.db import init_db, add_client, get_all_clients
 
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
@@ -38,14 +39,19 @@ async def process_email(message, state: FSMContext):
 async def process_phone(message, state: FSMContext):
     phone = message.text
     await state.update_data(phone=phone)
-    await message.answer("Клиент успешно добавлен!")
     data = await state.get_data()
-    print(data)
+    await add_client(
+    name=data['name'],
+    phone=data['phone'],
+    email=data.get('email')
+    )
+    await message.answer("Клиент успешно добавлен!")
     await state.clear()
 
 
 async def main():
     print("Application started")
+    await init_db()
     bot = Bot(token=settings.BOT_TOKEN)
     await dp.start_polling(bot)
 
