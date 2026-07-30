@@ -5,7 +5,6 @@ DB_PATH = "clients.db"
 
 
 async def init_db():
-    """Создаёт таблицу clients, если её ещё нет."""
     async with aiosqlite.connect(DB_PATH) as conn:
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS clients (
