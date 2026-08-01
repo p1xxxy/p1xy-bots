@@ -6,7 +6,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from app.config.db import init_db, add_client, get_all_clients
-from app.utils.validators import normalize_phone
+from app.utils.validators import normalize_phone, validate_email, validate_name
 
 
 dp = Dispatcher(storage=MemoryStorage())
@@ -26,14 +26,22 @@ async def cmd_start_add_client(message, state: FSMContext):
 @router.message(AddClient.waiting_for_name)
 async def process_name(message, state: FSMContext):
     name = message.text
-    await state.update_data(name=name)
+    valid_name = validate_name(name)
+    if not valid_name:
+        await message.answer("Некорректное имя. Попробуйте ещё раз.")
+        return
+    await state.update_data(name=valid_name)
     await message.answer("Какой у него email?")
     await state.set_state(AddClient.waiting_for_email)
 
 @router.message(AddClient.waiting_for_email)
 async def process_email(message, state: FSMContext):
     email = message.text
-    await state.update_data(email=email)
+    normalized_email = validate_email(email)
+    if not normalized_email:
+        await message.answer("Некорректный email. Попробуйте ещё раз.")
+        return
+    await state.update_data(email=normalized_email)
     await message.answer("Какой у него телефон?")
     await state.set_state(AddClient.waiting_for_phone)
 
