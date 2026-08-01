@@ -48,6 +48,15 @@ async def add_role(user_id: int, role_name: str) -> None:
         )
         await conn.commit()
 
+async def get_role(user_id: int) -> str | None:
+    async with aiosqlite.connect(DB_PATH) as conn:
+        cursor = await conn.execute(
+            "SELECT role_name FROM roles WHERE user_id = ?",
+            (user_id,)
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else None
+
 async def get_all_clients() -> list:
     async with aiosqlite.connect(DB_PATH) as conn:
          cursor = await conn.execute("SELECT * FROM clients")
