@@ -10,7 +10,8 @@ class RoleMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any]
     ) -> Any:
-        user_id = event.from_user.id if hasattr(event.from_user, 'id') else None
+        user_id = event.from_user.id if event.from_user else None
+        data['role'] = None
         if user_id is not None:
             role = await get_role(user_id)
             data['role'] = role

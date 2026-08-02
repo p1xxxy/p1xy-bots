@@ -1,16 +1,20 @@
 import asyncio
 from aiogram import Bot, Dispatcher, Router
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from app.config import settings
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
-from app.config.db import init_db, add_client, get_all_clients
+from app.config.db import init_db, add_client, init_roles, add_role
 from app.utils.validators import normalize_phone, validate_email, validate_name
+from app.utils.rolemiddleware import RoleMiddleware
 
 
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
+role_middleware = RoleMiddleware()
+router.message.middleware(role_middleware)
+router.callback_query.middleware(role_middleware)
 dp.include_router(router)
 
 class AddClient(StatesGroup):
@@ -62,10 +66,18 @@ async def process_phone(message, state: FSMContext):
     await message.answer("Клиент успешно добавлен!")
     await state.clear()
 
+@router.message(Command("whoami"))
+async def whoami(message, role: str | None):
+    if role:
+        await message.answer(f"Ваша роль: {role}")
+    else:
+        await message.answer("У вас нет роли.")
 
 async def main():
     print("Application started")
     await init_db()
+    await init_roles()
+    await add_role(settings.ADMIN_ID, "admin")
     bot = Bot(token=settings.BOT_TOKEN)
     await dp.start_polling(bot)
 
