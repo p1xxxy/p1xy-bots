@@ -60,7 +60,7 @@ uv run main.py
 
 ### Мониторинг и наблюдаемость
 - [ ] Structured logging (JSON-логи вместо print)
-- [ ] Prometheus — метрики бота (кол-во апдейтов, ошибки, латency хендлеров)
+- [ ] Prometheus — метрики бота (кол-во апдейтов, ошибки, latency хендлеров)
 - [ ] Grafana — дашборды поверх Prometheus
 - [ ] Алерты (Telegram/email при падении бота или всплеске ошибок)
 - [ ] Health-check эндпоинт
@@ -69,7 +69,3 @@ uv run main.py
 - [ ] Тесты (pytest) на валидаторы и работу с БД
 - [ ] Линтеры/форматтеры (ruff, black) в pre-commit
 - [ ] Type checking (mypy)
-
-## Лицензия
-
-Личный/учебный проект, лицензия не определена.
