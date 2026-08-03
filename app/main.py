@@ -74,6 +74,17 @@ async def whoami(message, role: str | None):
     else:
         await message.answer("У вас нет роли.")
         
+@router.callback_query(F.data.startswith("approve_"))
+async def approve_request(callback_query: types.CallbackQuery, bot: Bot):
+    data = callback_query.data.split("_")
+    user_id = int(data[1])
+    role_name = data[2]
+    await add_role(user_id, role_name)
+    await remove_pending_request(user_id)
+    await bot.send_message(chat_id=user_id, text=f"Ваша роль была изменена на {role_name}.")
+    await callback_query.message.edit_text(f"Запрос на роль оператора от пользователя {user_id} был одобрен и роль изменена на {role_name}.")
+    await callback_query.answer("Запрос одобрен.")
+    
 @router.message(Command("register"))
 async def cmd_register(message, role: str | None, bot: Bot):
     if role:
@@ -87,7 +98,8 @@ async def cmd_register(message, role: str | None, bot: Bot):
         await message.answer("Ваш запрос на роль оператора отправлен. Ожидайте подтверждения.")
         username_display = f"@{username}" if username else "без username"
         keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Подтвердить", callback_data=f"approve_{user_id}")],
+            [InlineKeyboardButton(text="Изменить роль на менеджера", callback_data=f"approve_{user_id}_manager")],
+            [InlineKeyboardButton(text="Изменить роль на администратора", callback_data=f"approve_{user_id}_admin")],
             [InlineKeyboardButton(text="Отклонить", callback_data=f"reject_{user_id}")]
         ])
         await bot.send_message(chat_id=settings.ADMIN_ID, text=f"Новый запрос на роль оператора от {full_name} ({username_display}).", reply_markup=keyboard)
