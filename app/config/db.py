@@ -3,7 +3,6 @@ from datetime import datetime
 
 DB_PATH = "clients.db"
 
-
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as conn:
         await conn.execute("""
@@ -28,6 +27,47 @@ async def init_roles():
                 created_at TEXT NOT NULL,
                 updated_at TEXT
             )""")
+        await conn.commit()
+        
+async def init_pending_operators():
+    """Создаёт таблицу для хранения ожидающих операторов, если её ещё нет."""
+    async with aiosqlite.connect(DB_PATH) as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS pending_operators (
+                user_id INTEGER PRIMARY KEY,
+                username TEXT,
+                full_name TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )""")
+        await conn.commit()
+        
+async def add_pending_request(user_id: int, username: str | None, full_name: str) -> bool:
+    """Добавляет запрос на роль оператора в базу данных.
+    
+    Возвращает True, если запрос был успешно добавлен, иначе False.
+    """
+    async with aiosqlite.connect(DB_PATH) as conn:
+        try:
+            await conn.execute(
+                "INSERT INTO pending_operators (user_id, username, full_name, created_at) VALUES (?, ?, ?, ?)",
+                (user_id, username, full_name, datetime.now().isoformat())
+            )
+            await conn.commit()
+            return True
+        except aiosqlite.IntegrityError:
+            # Если пользователь уже есть в таблице pending_operators
+            return False
+        except Exception as e:
+            print(f"Unexpected error in add_pending_request: {e}")
+            raise
+        
+async def remove_pending_request(user_id: int) -> None:
+    """Удаляет запрос на роль оператора из базы данных."""
+    async with aiosqlite.connect(DB_PATH) as conn:
+        await conn.execute(
+            "DELETE FROM pending_operators WHERE user_id = ?",
+            (user_id,)
+        )
         await conn.commit()
         
 async def add_client(name: str, phone: str, email:str | None) -> None:

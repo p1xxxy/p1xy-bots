@@ -1,11 +1,12 @@
 import asyncio
-from aiogram import Bot, Dispatcher, Router
+from aiogram import Bot, Dispatcher, Router, F, types
+from aiogram.types import InlineKeyboardButton
 from aiogram.filters import Command, CommandStart
 from app.config import settings
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
-from app.config.db import init_db, add_client, init_roles, add_role
+from app.config.db import init_db, add_client, init_roles, add_role, add_pending_request, init_pending_operators, remove_pending_request
 from app.utils.validators import normalize_phone, validate_email, validate_name
 from app.utils.rolemiddleware import RoleMiddleware
 
@@ -72,12 +73,33 @@ async def whoami(message, role: str | None):
         await message.answer(f"Ваша роль: {role}")
     else:
         await message.answer("У вас нет роли.")
+        
+@router.message(Command("register"))
+async def cmd_register(message, role: str | None, bot: Bot):
+    if role:
+        await message.answer("Вы уже зарегистрированы.")
+        return
+    user_id = message.from_user.id
+    username = message.from_user.username
+    full_name = message.from_user.full_name
+    success = await add_pending_request(user_id, username, full_name)
+    if success:
+        await message.answer("Ваш запрос на роль оператора отправлен. Ожидайте подтверждения.")
+        username_display = f"@{username}" if username else "без username"
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Подтвердить", callback_data=f"approve_{user_id}")],
+            [InlineKeyboardButton(text="Отклонить", callback_data=f"reject_{user_id}")]
+        ])
+        await bot.send_message(chat_id=settings.ADMIN_ID, text=f"Новый запрос на роль оператора от {full_name} ({username_display}).", reply_markup=keyboard)
+    else:
+        await message.answer("Вы уже отправляли запрос на роль оператора. Пожалуйста, ожидайте подтверждения.")
 
 async def main():
     print("Application started")
     await init_db()
     await init_roles()
     await add_role(settings.ADMIN_ID, "admin")
+    await init_pending_operators()
     bot = Bot(token=settings.BOT_TOKEN)
     await dp.start_polling(bot)
 
