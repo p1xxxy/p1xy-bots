@@ -6,7 +6,7 @@ from app.config import settings
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
-from app.config.db import init_db, add_client, init_roles, add_role, add_pending_request, init_pending_operators, remove_pending_request
+from app.config.db import init_db, add_client, init_roles, add_role, add_pending_request, init_pending_operators, remove_pending_request, approve_operator
 from app.utils.validators import normalize_phone, validate_email, validate_name
 from app.utils.rolemiddleware import RoleMiddleware
 
@@ -79,11 +79,19 @@ async def approve_request(callback_query: types.CallbackQuery, bot: Bot):
     data = callback_query.data.split("_")
     user_id = int(data[1])
     role_name = data[2]
-    await add_role(user_id, role_name)
-    await remove_pending_request(user_id)
+    await approve_operator(user_id, role_name)
     await bot.send_message(chat_id=user_id, text=f"Ваша роль была изменена на {role_name}.")
     await callback_query.message.edit_text(f"Запрос на роль оператора от пользователя {user_id} был одобрен и роль изменена на {role_name}.")
     await callback_query.answer("Запрос одобрен.")
+
+@router.callback_query(F.data.startswith("reject_"))
+async def reject_request(callback_query: types.CallbackQuery, bot: Bot):
+    user_id = int(callback_query.data.split("_")[1])
+    await remove_pending_request(user_id)
+    await bot.send_message(chat_id=user_id, text="Ваш запрос на роль оператора был отклонен.")
+    await callback_query.message.edit_text(f"Запрос на роль оператора от пользователя {user_id} был отклонен.")
+    await callback_query.answer("Запрос отклонен.")
+
     
 @router.message(Command("register"))
 async def cmd_register(message, role: str | None, bot: Bot):

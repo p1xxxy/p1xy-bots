@@ -97,6 +97,25 @@ async def get_role(user_id: int) -> str | None:
         row = await cursor.fetchone()
         return row[0] if row else None
 
+async def approve_operator(user_id: int, role_name: str) -> None:
+    async with aiosqlite.connect(DB_PATH) as conn:
+        try:
+            now = datetime.now().isoformat()
+            await conn.execute(
+                "INSERT INTO roles (user_id, role_name, created_at, updated_at) VALUES (?, ?, ?, NULL)"
+                " ON CONFLICT(user_id) DO UPDATE SET role_name=excluded.role_name, updated_at=?",
+                (user_id, role_name, now, now)
+            )
+            await conn.execute(
+                "DELETE FROM pending_operators WHERE user_id = ?",
+                (user_id,)
+            )
+            await conn.commit()
+        except Exception as e:
+            await conn.rollback()
+            print(f"Failed to approve operator {user_id}: {e}")
+            raise
+
 async def get_all_clients() -> list:
     async with aiosqlite.connect(DB_PATH) as conn:
          cursor = await conn.execute("SELECT * FROM clients")
