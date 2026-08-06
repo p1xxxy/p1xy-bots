@@ -9,6 +9,7 @@ from aiogram.fsm.context import FSMContext
 from app.config.db import init_db, add_client, init_roles, add_role, add_pending_request, init_pending_operators, remove_pending_request, approve_operator
 from app.utils.validators import normalize_phone, validate_email, validate_name
 from app.utils.rolemiddleware import RoleMiddleware
+from app.services.operator_registration import process_operator_registration
 
 
 dp = Dispatcher(storage=MemoryStorage())
@@ -24,7 +25,20 @@ class AddClient(StatesGroup):
     waiting_for_phone = State()
 
 @router.message(CommandStart())
-async def cmd_start_add_client(message, state: FSMContext):
+async def cmd_welcome(message, role: str | None):
+    if role is None:
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Зарегистрироваться", callback_data="start_register")]
+        ])
+        await message.answer("Добро пожаловать! Вы можете зарегистрироваться как оператор с помощью кнопки ниже.", reply_markup=keyboard)
+    else:
+        await message.answer(f"Добро пожаловать! Ваша роль: {role}. Вы можете добавить клиента с помощью команды /add_client_db.")
+
+@router.message(Command("add_client_db"))
+async def cmd_add_client_db(message, state: FSMContext, role: str | None):
+    if role is None:
+        await message.answer("Команда доступна только операторам.")
+        return
     await message.answer("Как зовут вашего клиента?")
     await state.set_state(AddClient.waiting_for_name)
 
@@ -92,27 +106,19 @@ async def reject_request(callback_query: types.CallbackQuery, bot: Bot):
     await callback_query.message.edit_text(f"Запрос на роль оператора от пользователя {user_id} был отклонен.")
     await callback_query.answer("Запрос отклонен.")
 
-    
+
 @router.message(Command("register"))
 async def cmd_register(message, role: str | None, bot: Bot):
-    if role:
-        await message.answer("Вы уже зарегистрированы.")
+    if role is not None:
+        await message.answer("Вы уже зарегистрированы как оператор.")
         return
-    user_id = message.from_user.id
-    username = message.from_user.username
-    full_name = message.from_user.full_name
-    success = await add_pending_request(user_id, username, full_name)
-    if success:
-        await message.answer("Ваш запрос на роль оператора отправлен. Ожидайте подтверждения.")
-        username_display = f"@{username}" if username else "без username"
-        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Изменить роль на менеджера", callback_data=f"approve_{user_id}_manager")],
-            [InlineKeyboardButton(text="Изменить роль на администратора", callback_data=f"approve_{user_id}_admin")],
-            [InlineKeyboardButton(text="Отклонить", callback_data=f"reject_{user_id}")]
-        ])
-        await bot.send_message(chat_id=settings.ADMIN_ID, text=f"Новый запрос на роль оператора от {full_name} ({username_display}).", reply_markup=keyboard)
-    else:
-        await message.answer("Вы уже отправляли запрос на роль оператора. Пожалуйста, ожидайте подтверждения.")
+    response = await process_operator_registration(
+        user_id=message.from_user.id,
+        username=message.from_user.username,
+        full_name=message.from_user.full_name,
+        bot=bot
+    )
+    await message.answer(response)
 
 async def main():
     print("Application started")
