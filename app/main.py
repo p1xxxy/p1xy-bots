@@ -107,18 +107,20 @@ async def reject_request(callback_query: types.CallbackQuery, bot: Bot):
     await callback_query.answer("Запрос отклонен.")
 
 
-@router.message(Command("register"))
-async def cmd_register(message, role: str | None, bot: Bot):
+@router.callback_query(F.data == "start_register")
+async def start_register(callback_query: types.CallbackQuery, role: str | None, bot: Bot):
     if role is not None:
-        await message.answer("Вы уже зарегистрированы как оператор.")
+        await callback_query.message.answer("Вы уже зарегистрированы как оператор.")
+        await callback_query.answer()
         return
     response = await process_operator_registration(
-        user_id=message.from_user.id,
-        username=message.from_user.username,
-        full_name=message.from_user.full_name,
+        user_id=callback_query.from_user.id,
+        username=callback_query.from_user.username,
+        full_name=callback_query.from_user.full_name,
         bot=bot
     )
-    await message.answer(response)
+    await callback_query.message.answer(response)
+    await callback_query.answer()
 
 async def main():
     print("Application started")
